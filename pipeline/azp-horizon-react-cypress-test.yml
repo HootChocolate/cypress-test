@@ -8,8 +8,6 @@ variables:
   - group: cypress-variables
   - name: TRIGGER_BRANCH
     value: $(resources.pipeline.horizon-react-app-delivery.sourceBranch)
-  - name: TEAMS_URL
-    value: "https://$(TEAMS_URL_PROD_SERVER).brazilsouth.logic.azure.com:443/workflows/$(TEAMS_WORKFLOW_PORTAL_MONITORAMENTO)/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=$(TEAMS_SIG_PORTAL_MONITORAMENTO)"
   - name: DASHBOARD_TESTS_RESULT
     value: "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)&view=ms.vss-test-web.build-test-results-tab"
   - name: TELEGRAM_URL_PORTAL_MONITORAMENTO
@@ -26,11 +24,11 @@ parameters:
 # É necessário a tag para execuções via cron
 resources:
   pipelines:
-  - pipeline: horizon-react-app-delivery
-    source: horizon-react-app-delivery # nome da pipeline referenciada pela resource
+  - pipeline: app-delivery
+    source: app-delivery # nome da pipeline referenciada pela resource
     trigger:
       tags:        # filtro usado para disparar está pipeline
-      - trigger-horizon-react-cypress-test
+      - trigger-cypress-test
       branches:
         include: 
         - refs/heads/qa
@@ -114,7 +112,7 @@ stages:
                 echo "groupName: $(groupName)"
 
           # por motivos de boas práticas deve ser definido uma baseUrl para o cypress, 
-          # por padrão é o portal por isso apenas o qa deve ser trocado a baseUrl e url da api
+          # por padrão o da master por isso apenas o qa deve ser trocado a baseUrl e url da api
           - task: Bash@3  # roda no QA
             displayName: 'QA $(groupName) - Cypress E2E tests'
             condition: or(eq('${{ parameters.RUN_ON_QA }}', 'true'), and(eq(variables['TRIGGER_BRANCH'], 'refs/heads/qa'), eq(variables['Build.Reason'], 'ResourceTrigger')))
@@ -161,7 +159,6 @@ stages:
             condition: succeededOrFailed() # mesmo que falhe um teste do front/back, o que gerar de doc, atualiza
             inputs:
               targetType: 'inline'
-              # ver se dá pra mover os condition do portal para uma variavel
               script: |
                 echo ">>> Publicando documentação na Wiki do Azure, gerada em teste anterior..."
                 echo "debugger......................."
@@ -430,7 +427,14 @@ stages:
                 EOF
                 )
 
-                echo "Status code = $status_code"
+                APPEND_STT_RESPONSE_CODE="- Status code esperado = 202, Status code retornado $status_code"
+
+                if [ "$status_code" -ne 202 ]; then
+                  echo "Erro no envio de mensagem $APPEND_STT_RESPONSE_CODE"
+                  exit 1
+                else
+                  echo "Mensagem enviada com sucesso $APPEND_STT_RESPONSE_CODE"
+                fi
 
       # Job de teste falhou e está marcado para notificar
       - job: failNotifyTestResults
@@ -537,10 +541,9 @@ stages:
 
                   # <<EOF -heredoc, uma forma de escrever blocos de texto multilinha no shell
                   # Tudo que estiver entre <<EOF e EOF(pode ser qualquer palavra) será considerado texto literal
-                  status_code=$(curl -s -o /tmp/curl_response.json -w "%{http_code}" --max-time 60 -X POST "$(TEAMS_URL)" \
+                  response=$(curl -s -w "\n%{http_code}" -X POST "$(TEAMS_URL)" \
                     -H "Content-Type: application/json" \
-                    -d @- <<EOF
-                  {
+                    -d '{
                     "type": "AdaptiveCard",
                     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                     "attachments": [
@@ -560,7 +563,7 @@ stages:
                                   "items": [
                                     {
                                       "type": "TextBlock",
-                                      "text": " ❌ Atenção: Os testes E2E com Cypress foram concluídos, mas algumas falhas foram detectadas.",
+                                      "text": "❌ Atenção: Os testes E2E com Cypress foram concluídos, mas algumas falhas foram detectadas.",
                                       "wrap": true,
                                       "spacing": "Small"
                                     }
@@ -575,7 +578,7 @@ stages:
                                 { "title": "🖥️ Navegador", "value": "$browserName - $browserVersion" },
                                 { "title": "🌐 Servidor:", "value": "$baseUrl" },
                                 { "title": "📡 API:", "value": "$base_url_api" },
-                                { "title": "🔁 Pipeline:", "value": "$(Build.DefinitionName) $(Build.BuildId)" },
+                                { "title": "🔁 Pipeline:", "value": "$(PIPELINE_TEST)" },
                                 { "title": "📊 Testes Executados:", "value": "$totalSuites Suites - $totalTests Testes" },
                                 { "title": "🟢 Testes com sucesso:", "value": "$totalPassed" },
                                 { "title": "🔴 Testes com erro:", "value": "$totalFailed" },
@@ -599,79 +602,96 @@ stages:
                         }
                       }
                     ]
-                  }
-                  EOF
-                  )
+                  }')
 
-                  echo "Status code: $status_code"
-                  echo "Response body saved in /tmp/curl_response.json"
+                  responseBody=$(echo "$response" | sed '$d')
+                  status_code=$(echo "$response" | tail -n1)
 
-                  
-                  echo "status code POST com erro com link para telegram"
-                  echo "$status_code"
+                  echo "Status Code: $status_code"
+
+                  if [ "$status_code" -ne 202 ]; then
+                    echo "❌ Erro ao enviar mensagem para o Teams"
+                    echo "Response body:"
+                    echo "$responseBody"
+                    exit 1
+                  else
+                    echo "✅ Mensagem enviada com sucesso"
+                  fi
 
                 else # quando NÃO deve enviar o link do telegram
 
                   echo "Notificação de ERRO, SEM link do Telegram"
 
-                  status_code=$(curl -s -o /tmp/curl_response.json -w "%{http_code}" --max-time 60 -X POST "$(TEAMS_URL)" \
+                  response=$(curl -s -w "\n%{http_code}" -X POST "$(TEAMS_URL)" \
                     -H "Content-Type: application/json" \
-                    -d @- <<EOF
-                  {
-                    "type": "AdaptiveCard",
-                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-                    "attachments": [
-                      {
-                        "contentType": "application/vnd.microsoft.card.adaptive",
-                        "content": {
-                          "type": "AdaptiveCard",
-                          "version": "1.2",
-                          "msteams": { "width": "Full" },
-                          "body": [
-                            {
-                              "type": "ColumnSet",
-                              "columns": [
-                                {
-                                  "type": "Column",
-                                  "width": "stretch",
-                                  "items": [
-                                    {
-                                      "type": "TextBlock",
-                                      "text": " ❌ Atenção: Os testes E2E com Cypress foram concluídos, mas algumas falhas foram detectadas.",
-                                      "wrap": true,
-                                      "spacing": "Small"
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "FactSet",
-                              "facts": [
-                                { "title": "🧪 Framework:", "value": "Cypress $cypressVersion" },
-                                { "title": "🖥️ Navegador", "value": "$browserName - $browserVersion" },
-                                { "title": "🌐 Servidor:", "value": "$baseUrl" },
-                                { "title": "📡 API:", "value": "$base_url_api" },
-                                { "title": "🔁 Pipeline:", "value": "$(Build.DefinitionName) $(Build.BuildId)" },
-                                { "title": "📊 Testes Executados:", "value": "$totalSuites Suites - $totalTests Testes" },
-                                { "title": "🟢 Testes com sucesso:", "value": "$totalPassed" },
-                                { "title": "🔴 Testes com erro:", "value": "$totalFailed" },
-                                { "title": "📅 Executado em:", "value": "$endedTestsAt" },
-                                { "title": "🕒 Tempo de Execução:", "value": "$totalDuration" }
-                              ]
-                            }
-                          ],
-                          "actions": [
-                            {
-                              "type": "Action.OpenUrl",
-                              "title": "📈 Results Dashboard",
-                              "url": "$(DASHBOARD_TESTS_RESULT)"
-                            }
-                          ]
+                    -d '{
+                      "type": "AdaptiveCard",
+                      "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                      "attachments": [
+                        {
+                          "contentType": "application/vnd.microsoft.card.adaptive",
+                          "content": {
+                            "type": "AdaptiveCard",
+                            "version": "1.2",
+                            "msteams": { "width": "Full" },
+                            "body": [
+                              {
+                                "type": "ColumnSet",
+                                "columns": [
+                                  {
+                                    "type": "Column",
+                                    "width": "stretch",
+                                    "items": [
+                                      {
+                                        "type": "TextBlock",
+                                        "text": "❌ Atenção: Os testes E2E com Cypress foram concluídos, mas algumas falhas foram detectadas.",
+                                        "wrap": true,
+                                        "spacing": "Small"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "FactSet",
+                                "facts": [
+                                  { "title": "🧪 Framework:", "value": "Cypress $cypressVersion" },
+                                  { "title": "🖥️ Navegador", "value": "$browserName - $browserVersion" },
+                                  { "title": "🌐 Servidor:", "value": "$baseUrl" },
+                                  { "title": "📡 API:", "value": "$base_url_api" },
+                                  { "title": "🔁 Pipeline:", "value": "$(PIPELINE_TEST)" },
+                                  { "title": "📊 Testes Executados:", "value": "$totalSuites Suites - $totalTests Testes" },
+                                  { "title": "🟢 Testes com sucesso:", "value": "$totalPassed" },
+                                  { "title": "🔴 Testes com erro:", "value": "$totalFailed" },
+                                  { "title": "📅 Executado em:", "value": "$endedTestsAt" },
+                                  { "title": "🕒 Tempo de Execução:", "value": "$totalDuration" }
+                                ]
+                              }
+                            ],
+                            "actions": [
+                              {
+                                "type": "Action.OpenUrl",
+                                "title": "📈 Results Dashboard",
+                                "url": "$(DASHBOARD_TESTS_RESULT)"
+                              }
+                            ]
+                          }
                         }
-                      }
-                    ]
-                  }
-                  EOF
-                  )
-                fi
+                      ]
+                    }')
+
+                  # separa body e status code
+                  body=$(echo "$response" | sed '$d')
+                  status_code=$(echo "$response" | tail -n1)
+
+                  echo "Status Code: $status_code"
+
+                  # validação
+                  if [ "$status_code" -ne 202 ]; then
+                    echo "❌ Erro ao enviar mensagem para o Teams"
+                    echo "Response body:"
+                    echo "$body"
+                    exit 1
+                  else
+                    echo "✅ Mensagem enviada com sucesso"
+                  fi

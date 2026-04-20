@@ -38,11 +38,11 @@ Cypress.Commands.add('post_login', (email: string, password: string) => {
 		url: url,
 		headers: headers,
 		body: bodySaveDoc
-	});
+	})
 
 	return cy.api({
 		method: method,
-		url: `${Cypress.env("BASE_URL")}${url}`,
+		url: `${Cypress.env("BASE_URL_API")}${url}`,
 		body: body,
 		headers: headers
 	})
@@ -80,11 +80,11 @@ Cypress.Commands.add('realizar_login', (email: string, passwd: string) => {
 		})
 });
 
-Cypress.Commands.add('stub_saldo', () => {	
+Cypress.Commands.add('stub_saldo', () => {
   const intercepts: InterceptConfigInterface[] = [
     {
       method: 'GET',
-      url: `${Cypress.env('BASE_URL')}/saldo`,
+      url: `${Cypress.env('BASE_URL_API')}/saldo`,
       alias: 'getSaldo',
       fixture: fxAddress.CONTAS.GET_SALDO,
     }

@@ -60,6 +60,33 @@ export function check_status_code(statusRetornado: number, statusEsperado?: numb
   expect(statusRetornado, nvl(overrideMsg, 'Valida status code')).to.equal(statusEsperado ? statusEsperado : 200)
 }
 
+export function check_schema_validator(responseData: any, schema: Record<string, {}>, path: string, statusCode: string = "200") {
+  const existStatus = responseData.status;
+  let auxResponseData;
+
+  if (existStatus) {  // se existe o campo de status, é porque foi passado a response, ao invés do response.data, dai forço um data
+    auxResponseData = responseData.data
+  } else {
+    auxResponseData = responseData
+  }
+
+  if (!isNullOrEmpty(auxResponseData)) {  // quando foi passado informação para validar
+    const someData = auxResponseData[0] ? auxResponseData[0] : auxResponseData // tratativa caso seja passado uma posição do response, e não o reponse completo
+
+    const checkPath = schema.paths[path];
+    if (isNullOrEmpty(checkPath)) {
+      throw new Error(`Path não definido corretamente no schema esperado. Path [${path}]`)
+    }
+    
+    const responseSchema = schema.paths[path].get.responses[statusCode].schema
+    const descriptionSchema = schema.paths[path].get.description
+
+    schema_validator(responseSchema, someData, descriptionSchema);
+  } else {
+    cy.log(`Sem informação para validar schema [${path}]`)
+  }
+}
+
 export function expect_comMargemErro(expected: number, actual: number, margemErro: number, msg: string) {
   const min = actual - margemErro;
   const max = actual + margemErro;
@@ -128,7 +155,7 @@ export function expectNotNullValuesOnList(arrData: object, expectedValues: strin
 }
 
 // Add a custom Cypress command for schema validation
-export function schema_validator(schema, data) {
+function schema_validator(schema, data, description) {
   if (isNullOrEmpty(data)) {
     cy.warn(`schema_validator - sem dados de resposta para validar schema:\n${schema}`)
     return
@@ -154,9 +181,9 @@ export function schema_validator(schema, data) {
   const validate = ajv.compile(schema);
 
   // Perform validation
-  const valid = validate(dataValidate);
-
-  if (!valid) {
+  const ok = validate(dataValidate);
+  const msg = `Schema Validate - ${description}`;
+  if (!ok) {
     // Log validation errors in a readable format
     const err = JSON.stringify(validate.errors, null, 2);
 
@@ -167,5 +194,5 @@ export function schema_validator(schema, data) {
   }
 
   // Assert that the validation passed
-  expect(valid, 'Validation schema').to.be.true;
+  expect(ok, msg).to.be.true;
 }

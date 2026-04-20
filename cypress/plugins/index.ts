@@ -37,6 +37,8 @@ declare namespace Cypress {
 
     valida_valor_monetario(valor: string): Chainable<JQuery<HTMLElement>>,
     valida_campo_data(data: string): Chainable<JQuery<HTMLElement>>,
+    
+    validar_dados_home_page(): Chainable<JQuery<HTMLElement>>,
     /**
      * Encontra todos os textos à partir do locator, e compara com as opções passada
      * validando que no locator passado, existem as opções

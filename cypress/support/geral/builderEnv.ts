@@ -112,8 +112,14 @@ Cypress.Commands.add('ensureSession', (email: string, passwd: string, frontend: 
     const typeLogin = `${frontend ? 'loginByForm' : 'loginByAPI'}`;
     const fileName = Cypress.spec.name;
     const aux = email.replace('@', '_')
+    
 
-    const sessionId = `${frontend ? [aux, typeLogin, fileName] : [aux, typeLogin, fileName]}`;
+    const sessionId = {
+        user: aux,
+        loginType: typeLogin,
+        visit: overrideVisitURL || '/',
+        frontend
+    };
 
     return cy.session(sessionId, () => {
         if (!overrideVisitURL) { // não sobrescrever visit
@@ -136,7 +142,7 @@ Cypress.Commands.add('ensureSession', (email: string, passwd: string, frontend: 
         validate() {
             if (frontend) {
                 if (!overrideVisitURL) { // não sobrescreveu o visit
-                    cy.visit(`${Cypress.env("MENU_HOME")}`)
+                    cy.visit('/') // TODO: Adicionar uma validação para a aplicação quando for utilizar
                 } else {
                     cy.visit(overrideVisitURL)
                 }

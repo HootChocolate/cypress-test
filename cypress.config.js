@@ -535,6 +535,7 @@ module.exports = defineConfig({
     },
     env: {
       BASE_URL: "https://barrigareact.wcaquino.me",
+      BASE_URL_API: "https://barrigarest.wcaquino.me"
     }
   },
 });

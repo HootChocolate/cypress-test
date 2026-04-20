@@ -24,6 +24,7 @@
 //
 //
 import './login/commandsLogin';
+import './home/commandsHome'
 
 import './geral/commandsGeral';
 import './geral/builderEnv'
