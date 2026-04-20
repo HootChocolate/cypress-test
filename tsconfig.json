@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "types": ["cypress", "node"],
+    "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "paths": {
+      "@cypress/*": ["cypress/*"],
+      "@support/*": ["cypress/support/*"],
+      "@fixtures/*": ["cypress/fixtures/*"],
+      "@e2e/*": ["cypress/e2e/*"],
+      "@locators/*": ["cypress/locators/*"]
+    },
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0", // Silencia warnings de deprecação do TypeScript (ex: baseUrl, moduleResolution) que quebram o Cypress ao carregar o config; manter enquanto o Cypress/ts-node não suportar plenamente TS moderno
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false
+  },
+  "include": [
+    "cypress/**/*.ts"
+  ]
+}

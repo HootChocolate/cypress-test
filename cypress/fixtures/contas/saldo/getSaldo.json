@@ -1,0 +1,22 @@
+[
+    {
+        "conta_id": 2605957,
+        "conta": "Conta para movimentacoes",
+        "saldo": "-1500.00"
+    },
+    {
+        "conta_id": 2605958,
+        "conta": "Conta com movimentacao",
+        "saldo": "-1500.00"
+    },
+    {
+        "conta_id": 2605959,
+        "conta": "Conta para saldo",
+        "saldo": "534.00"
+    },
+    {
+        "conta_id": 2605960,
+        "conta": "Conta para extrato",
+        "saldo": "-220.00"
+    }
+]
