@@ -5,6 +5,8 @@
   "scripts": {
     "cy:open": "npx cypress open",
     "cy:run": "npx cypress run",
+    "cy:run:backend": "npx cypress run --spec 'cypress/e2e/**/*-backend.cy.ts'",
+    "cy:run:frontend": "npx cypress run --spec 'cypress/e2e/**/*-frontend.cy.ts'",
     "cy:verify": "cypress verify",
     "generate:doc": "ts-node cypress/scripts/generate-md.ts"
   },

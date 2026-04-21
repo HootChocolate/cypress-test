@@ -42,12 +42,12 @@ Para evitar múltiplos logins:
  ┃ ┃ ┃ ┗ 📂 tmp/   
  ┃ ┣ 📂 results/   
  ┃ ┃ ┗ 📂 doc/   
- ┃ ┃    ┣ api-doc.json   
- ┃ ┃    ┗ api-doc.md / swagger.json   
+ ┃ ┃    ┣ api-doc.json # Gera json quando roda o teste no cypress
+ ┃ ┃    ┗ api-doc.md   # Transforma o arquivo .json em um arquivo markdown - quando roda o sript generate   
  ┃ ┣ 📂 support/       # Commands e configs   
  ┃ ┗ 📂 e2e/           # Testes   
  ┣ 📂 scripts/   
- ┃ ┗ generate-doc.ts   # Geração de documentação   
+ ┃ ┗ generate-doc.ts   # Script que gera documentação   
  ┣ package.json   
  ┗ tsconfig.json   
 ```

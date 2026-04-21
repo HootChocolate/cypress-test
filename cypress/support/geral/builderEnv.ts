@@ -104,6 +104,9 @@ function fixtureUserLoginHashPattern(username: string) {
  */
 Cypress.Commands.add('ensureSession', (email: string, passwd: string, frontend: boolean, overrideVisitURL?: string) => {
 
+    if (!email || !passwd) {
+        throw new Error(`Required values must be provided [email: ${passwd}, passwd: ${passwd}]`)
+    }
     if (frontend && !overrideVisitURL) { // se não sobrescrever a url do visit
         buildEnv(email, passwd, frontend)
     }

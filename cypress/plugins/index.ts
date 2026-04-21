@@ -26,7 +26,7 @@ declare namespace Cypress {
     check_salvo_com_sucesso(response: object, overrideMsg?: string): Chainable<JQuery<HTMLElement>>,
     check_removido_com_sucesso(response: object, overrideMsg?: string): Chainable<JQuery<HTMLElement>>,
 
-    post_login(email: string, passwd: string): Chainable,
+    post_login(email: string, password: string, failOnStatusCode?: boolean): Chainable,
     stub_login_ensure_session(fixtureTmp: string): Chainable,
     stub_saldo(): Chainable
     realizar_login(email: string, passwd: string): Chainable<JQuery<HTMLElement>>,

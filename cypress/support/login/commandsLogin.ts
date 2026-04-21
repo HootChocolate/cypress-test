@@ -14,15 +14,15 @@ Cypress.Commands.add('stub_login_ensure_session', (fixtureTmp: string) => {
 	return cy.do_intercept(intercepts);
 })
 
-Cypress.Commands.add('post_login', (email: string, password: string) => {
+Cypress.Commands.add('post_login', (email: string, password: string, failOnStatusCode?: boolean) => {
 	const method = "POST";
 	const url = `/signin`;
 	const headers = {
 		"Content-Type": "application/json"
 	}
 	const body = { 
-		email: email, 
-		senha: password, 
+		email: `${email}`, 
+		senha: `${password}`, 
 		redirecionar: false
 	}
 
@@ -44,6 +44,7 @@ Cypress.Commands.add('post_login', (email: string, password: string) => {
 		method: method,
 		url: `${Cypress.env("BASE_URL_API")}${url}`,
 		body: body,
+		failOnStatusCode: failOnStatusCode != undefined ? failOnStatusCode : true,
 		headers: headers
 	})
 })

@@ -5,9 +5,9 @@ pool:
 
 # Set variables once
 variables:
-  - group: cypress-variables
-  - name: TRIGGER_BRANCH
-    value: $(resources.pipeline.horizon-react-app-delivery.sourceBranch)
+  - group: cypress-variables-v2
+  # - name: TRIGGER_BRANCH
+  #   value: $(resources.pipeline.app-delivery.sourceBranch) # pipeline que dispara a trigger
   - name: DASHBOARD_TESTS_RESULT
     value: "$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)&view=ms.vss-test-web.build-test-results-tab"
   - name: TELEGRAM_URL_PORTAL_MONITORAMENTO
@@ -22,23 +22,23 @@ parameters:
 # A trigger será disparada para a branch master do reposítório de teste.
 # O ambiente que será executado (portal ou qa) dependerá do artefato publicado pela pipeline anterior
 # É necessário a tag para execuções via cron
-resources:
-  pipelines:
-  - pipeline: app-delivery
-    source: app-delivery # nome da pipeline referenciada pela resource
-    trigger:
-      tags:        # filtro usado para disparar está pipeline
-      - trigger-cypress-test
-      branches:
-        include: 
-        - refs/heads/qa
-        - refs/heads/master
+# resources:
+#   pipelines:
+#   - pipeline: app-delivery
+#     source: app-delivery # nome da pipeline referenciada pela resource
+#     trigger:
+#       tags:        # filtro usado para disparar está pipeline
+#       - trigger-cypress-test
+#       branches:
+#         include: 
+#         - refs/heads/qa
+#         - refs/heads/master
 
 stages:
   - stage: Test
     jobs:
       - job: CypressE2ETests
-        displayName: "Run E2E Cypress Tests (Matrix)"
+        displayName: "Matrix - Run E2E Cypress Tests"
         # container: cypress/browsers:latest # Use latest no version number
         # browser:  chrome, possível definir em uma matrix mais de um browser, depois deve ser passado o browser no npx run e reports
         #           quando existir publicação de resultados, deve ser passado o nome do browser no publish
@@ -48,7 +48,6 @@ stages:
             frontend:
               groupName: frontend
               specPattern: "cypress/e2e/**/*-frontend.cy.ts"
-              
             backend:
               groupName: backend
               specPattern: "cypress/e2e/**/*-backend.cy.ts"
@@ -100,7 +99,7 @@ stages:
             displayName: 'Debug - Print Variables'
             inputs:
               script: |
-                echo "Debug variables"
+                echo "🔎 Debug variables"
                 echo "Pipeline.Workspace = $(Pipeline.Workspace)"
                 echo "BUILD_BUILDNUMBER = $BUILD_BUILDNUMBER"
                 echo "Trigger disparada a partir da branch: $(TRIGGER_BRANCH)"
@@ -110,26 +109,71 @@ stages:
                 echo "Build.BuildId: $(Build.BuildId)"
                 echo "Build.BuildNumber: $(Build.BuildNumber)"
                 echo "groupName: $(groupName)"
-
+                
           # por motivos de boas práticas deve ser definido uma baseUrl para o cypress, 
           # por padrão o da master por isso apenas o qa deve ser trocado a baseUrl e url da api
           - task: Bash@3  # roda no QA
-            displayName: 'QA $(groupName) - Cypress E2E tests'
+            displayName: 'QA - Cypress E2E tests'
             condition: or(eq('${{ parameters.RUN_ON_QA }}', 'true'), and(eq(variables['TRIGGER_BRANCH'], 'refs/heads/qa'), eq(variables['Build.Reason'], 'ResourceTrigger')))
             inputs:
               targetType: 'inline'
               script: | 
                 echo "QA - Executando testes..."
-                npx cypress run --spec "$(specPattern)" --config baseUrl=$(baseUrl_QA) --browser chrome --headless --env BASE_URL_API=$(BASE_URL_API_QA),CYPRESS_CY_344_USERNAME=$(CYPRESS_CY_344_USERNAME),CYPRESS_CY_344_PASSWD=$(CYPRESS_CY_344_PASSWD),CYPRESS_CY_202_USERNAME=$(CYPRESS_CY_202_USERNAME),CYPRESS_CY_202_PASSWD=$(CYPRESS_CY_202_PASSWD),CYPRESS_CY_1_USERNAME=$(CYPRESS_CY_1_USERNAME),CYPRESS_CY_1_PASSWD=$(CYPRESS_CY_1_PASSWD),NOTIFY=$(NOTIFY),NOTIFY_ON_SUCCESS=$(NOTIFY_ON_SUCCESS),NOTIFY_ERR_TELEGRAM_VIDEO=$(NOTIFY_ERR_TELEGRAM_VIDEO),NOTIFY_ERR_TELEGRAM_SCHEENSHOT=$(NOTIFY_ERR_TELEGRAM_SCHEENSHOT),TELEGRAM_BOT_ID_PORTAL_MONITORAMENTO=$(TELEGRAM_BOT_ID_PORTAL_MONITORAMENTO),TELEGRAM_CHAT_ID_PORTAL_MONITORAMENTO=$(TELEGRAM_CHAT_ID_PORTAL_MONITORAMENTO),TEAMS_URL_PROD_SERVER=$(TEAMS_URL_PROD_SERVER),TEAMS_WORKFLOW_PORTAL_MONITORAMENTO=$(TEAMS_WORKFLOW_PORTAL_MONITORAMENTO),TEAMS_SIG_PORTAL_MONITORAMENTO=$(TEAMS_SIG_PORTAL_MONITORAMENTO),TELEGRAM_WEB_URL_PORTAL_MONITORAMENTO=$(TELEGRAM_WEB_URL_PORTAL_MONITORAMENTO),NOTIFY_WARNS_TELEGRAM_MONITOR=$(NOTIFY_WARNS_TELEGRAM_MONITOR),CHAT_ID_WARNS_TELEGRAM_MONITOR=$(CHAT_ID_WARNS_TELEGRAM_MONITOR),BOT_ID_WARNS_TELEGRAM_MONITOR=$(BOT_ID_WARNS_TELEGRAM_MONITOR)
+
+                export CYPRESS_BASE_URL_API=$(BASE_URL_API)
+                export CYPRESS_BASE_URL_QA=$(BASE_URL_QA)
+                
+                export CYPRESS_SEU_BARRIGA_USERNAME=$(SEU_BARRIGA_USERNAME)
+                export CYPRESS_SEU_BARRIGA_EMAIL=$(SEU_BARRIGA_EMAIL)
+                export CYPRESS_SEU_BARRIGA_PASSWD=$(SEU_BARRIGA_PASSWD)
+                
+                export CYPRESS_RECORD_KEY=$(RECORD_KEY)
+                export CYPRESS_NOTIFY=$(NOTIFY)
+                export CYPRESS_NOTIFY_ON_SUCCESS=$(NOTIFY_ON_SUCCESS)
+                
+                export CYPRESS_NOTIFY_ERR_TELEGRAM_SCHEENSHOT=$(NOTIFY_ERR_TELEGRAM_SCHEENSHOT)
+                export CYPRESS_NOTIFY_ERR_TELEGRAM_VIDEO=$(NOTIFY_ERR_TELEGRAM_VIDEO)
+                export CYPRESS_TELEGRAM_BOT_ID_ARGUS_BOT=$(TELEGRAM_BOT_ID_ARGUS_BOT)
+                export CYPRESS_TELEGRAM_CHAT_ID_ARGUS_BOT=$(TELEGRAM_CHAT_ID_ARGUS_BOT)
+
+                export CYPRESS_AZURE_DEVOPS_PAT=$(AZURE_DEVOPS_PAT)
+
+                npx cypress run \
+                  --spec "$(specPattern)" \
+                  --config baseUrl=$(baseUrl_QA) \
+                  --browser chrome \
+                  --headless 
 
           - task: Bash@3  # roda no portal
-            displayName: 'Portal $(groupName) - Cypress E2E tests'
+            displayName: 'Master - Cypress E2E tests'
             condition: or(and(eq(variables['Build.Reason'], 'Manual'), eq('${{ parameters.RUN_ON_QA }}', 'false')), and(eq(variables['TRIGGER_BRANCH'], 'refs/heads/master'), eq(variables['Build.Reason'], 'ResourceTrigger')))
             inputs:
               targetType: 'inline'
               script: |
-                echo "Portal - Executando testes..."
-                npx cypress run --spec "$(specPattern)" --browser chrome --headless --env CYPRESS_CY_344_USERNAME=$(CYPRESS_CY_344_USERNAME),CYPRESS_CY_344_PASSWD=$(CYPRESS_CY_344_PASSWD),CYPRESS_CY_202_USERNAME=$(CYPRESS_CY_202_USERNAME),CYPRESS_CY_202_PASSWD=$(CYPRESS_CY_202_PASSWD),CYPRESS_CY_1_USERNAME=$(CYPRESS_CY_1_USERNAME),CYPRESS_CY_1_PASSWD=$(CYPRESS_CY_1_PASSWD),NOTIFY=$(NOTIFY),NOTIFY_ON_SUCCESS=$(NOTIFY_ON_SUCCESS),NOTIFY_ERR_TELEGRAM_VIDEO=$(NOTIFY_ERR_TELEGRAM_VIDEO),NOTIFY_ERR_TELEGRAM_SCHEENSHOT=$(NOTIFY_ERR_TELEGRAM_SCHEENSHOT),TELEGRAM_BOT_ID_PORTAL_MONITORAMENTO=$(TELEGRAM_BOT_ID_PORTAL_MONITORAMENTO),TELEGRAM_CHAT_ID_PORTAL_MONITORAMENTO=$(TELEGRAM_CHAT_ID_PORTAL_MONITORAMENTO),TEAMS_URL_PROD_SERVER=$(TEAMS_URL_PROD_SERVER),TEAMS_WORKFLOW_PORTAL_MONITORAMENTO=$(TEAMS_WORKFLOW_PORTAL_MONITORAMENTO),TEAMS_SIG_PORTAL_MONITORAMENTO=$(TEAMS_SIG_PORTAL_MONITORAMENTO),TELEGRAM_WEB_URL_PORTAL_MONITORAMENTO=$(TELEGRAM_WEB_URL_PORTAL_MONITORAMENTO),NOTIFY_WARNS_TELEGRAM_MONITOR=$(NOTIFY_WARNS_TELEGRAM_MONITOR),CHAT_ID_WARNS_TELEGRAM_MONITOR=$(CHAT_ID_WARNS_TELEGRAM_MONITOR),BOT_ID_WARNS_TELEGRAM_MONITOR=$(BOT_ID_WARNS_TELEGRAM_MONITOR) && ts-node cypress/scripts/generate-md.ts
+                echo "Master Executando testes..."
+
+                export CYPRESS_BASE_URL_API=$(BASE_URL_API)
+                export CYPRESS_BASE_URL_QA=$(BASE_URL_QA)
+                
+                export CYPRESS_SEU_BARRIGA_USERNAME=$(SEU_BARRIGA_USERNAME)
+                export CYPRESS_SEU_BARRIGA_EMAIL=$(SEU_BARRIGA_EMAIL)
+                export CYPRESS_SEU_BARRIGA_PASSWD=$(SEU_BARRIGA_PASSWD)
+                
+                export CYPRESS_RECORD_KEY=$(RECORD_KEY)
+                export CYPRESS_NOTIFY=$(NOTIFY)
+                export CYPRESS_NOTIFY_ON_SUCCESS=$(NOTIFY_ON_SUCCESS)
+                
+                export CYPRESS_NOTIFY_ERR_TELEGRAM_SCHEENSHOT=$(NOTIFY_ERR_TELEGRAM_SCHEENSHOT)
+                export CYPRESS_NOTIFY_ERR_TELEGRAM_VIDEO=$(NOTIFY_ERR_TELEGRAM_VIDEO)
+                export CYPRESS_TELEGRAM_BOT_ID_ARGUS_BOT=$(TELEGRAM_BOT_ID_ARGUS_BOT)
+                export CYPRESS_TELEGRAM_CHAT_ID_ARGUS_BOT=$(TELEGRAM_CHAT_ID_ARGUS_BOT)
+
+                export CYPRESS_AZURE_DEVOPS_PAT=$(AZURE_DEVOPS_PAT)
+
+                npx cypress run \
+                  --spec "$(specPattern)" \
+                  --browser chrome \
+                  --headless && ts-node cypress/scripts/generate-md.ts
 
 # npx cypress run --record --key $(CYPRESS_RECORD_KEY) --parallel --ci-build-id $BUILD_BUILDNUMBER --env... # run on cypress cloud
 
@@ -152,63 +196,100 @@ stages:
               PathtoPublish: "$(System.DefaultWorkingDirectory)/cypress/fixtures/geral/tmp/monitoramento/after_run-results.json"
               ArtifactName: "afterRunResults"
               publishLocation: "Container"
-
-     
+          
+          # O processo de documentação pode ser ignorado, mudando a variable PUBLISH_DOC da library
+          # Encontra os testes de api, gerador pela task saveApiDoc()
+          # Publica a documentação, organizados conforme definido no path do saveApiDoc();
           - task: Bash@3
             displayName: "Wiki Documentation"
-            condition: succeededOrFailed() # mesmo que falhe um teste do front/back, o que gerar de doc, atualiza
+            condition: and(
+              succeededOrFailed(),
+              eq(variables['PUBLISH_DOC'], 'true'),
+              eq(variables['groupName'], 'backend')
+              ) # mesmo que falhe um teste do front/back, o que gerar de doc, atualiza
             inputs:
               targetType: 'inline'
               script: |
-                echo ">>> Publicando documentação na Wiki do Azure, gerada em teste anterior..."
-                echo "debugger......................."
+                echo "📝 Publicando documentação na Wiki do Azure..."
 
-                CY_ROOT_DOCS_PATH="cypress/results/doc"
+                if [ -z "$WIKI_API_NAME" ] || [ -z "$WIKI_API_VERSION" ] || [ -z "$WIKI_IDENTIFIER" ]; then
+                  # -z = variável vazia ou não definida
+                  echo "🚫 ERRO = Variáveis obrigatórias não informadas!"
+                  echo "WIKI_API_NAME=$WIKI_API_NAME"
+                  echo "WIKI_API_VERSION=$WIKI_API_VERSION"
+                  echo "WIKI_IDENTIFIER=$WIKI_IDENTIFIER"
+                  
+                  exit 1
+                fi
+                
+                CY_ROOT_DOCS_PATH="cypress/results/doc" # onde deve ser encontrados
 
                 WIKI_URL="$(System.TeamFoundationCollectionUri)$(System.TeamProject)/_apis/wiki/wikis/$(System.TeamProject).wiki"
                 WIKI_API_VERSION="$(WIKI_API_VERSION)"
 
+                # debug
+                echo "🔎 Debugger................"
                 echo "Collection URI = $(System.TeamFoundationCollectionUri)"
                 echo "Project       = $(System.TeamProject)"
                 echo "CY_ROOT_DOCS_PATH = $CY_ROOT_DOCS_PATH"
                 echo "WIKI_URL = $WIKI_URL"
-                echo "WIKI_API_VERSION = $WIKI_API_VERSION"
+                echo "Listando docs:"
 
-                echo "debugger......................."
+                # verifica se existe documento para publicar
+                # -d: é um diretório?
+                if [ -d "$CY_ROOT_DOCS_PATH" ]; then
+                  echo "👉 Documentos da pasta /doc:"
+                  ls -la "$CY_ROOT_DOCS_PATH"
+                else
+                  echo "❌ Erro na publicação de documentos, o repositório /doc não foi encontrado = $CY_ROOT_DOCS_PATH"
+                  exit 1
+                fi
                 
-                for file in $(find $CY_ROOT_DOCS_PATH -name "*.md"); do
-                  echo ">>> Enviando arquivo $file"
+                # debug - imprime todos os arquivos marrkdown na pasta de documentos
+                # echo "Arquivos .md >>>"
+                # find "$CY_ROOT_DOCS_PATH" -type f -name "*.md"
+                
+                echo "📤 Processo de publicação de documentos 📤"
+                
+                # Itera nos arquivos.md de documentação, para publicar
+                find "$CY_ROOT_DOCS_PATH" -type f -name "*.md" | while read -r file; do
+                  echo "👉 Enviando arquivo $file"
 
+                  # 
                   RELATIVE_PATH=$(echo "$file" | sed "s|$CY_ROOT_DOCS_PATH||" | sed 's|.md$||')
                   WIKI_PATH="$(WIKI_API_NAME)/${RELATIVE_PATH#/}"
-                  echo "WIKI_PATH = $WIKI_PATH"
+                  
+                  echo "👉 Publicar arquivo do path = $WIKI_PATH"
 
                   IFS='/' read -ra PATH_PARTS <<< "${WIKI_PATH#/}"
 
                   CURRENT_PATH=""
                   NUM_PARTS=${#PATH_PARTS[@]}
 
-                  # itera nos arquivos para envio do root_path
+                  # itera nos arquivos criados do path/ para criar as pastas principais e conteúdos das pastas
                   for i in "${!PATH_PARTS[@]}"; do
-                    CURRENT_PATH="$CURRENT_PATH/${PATH_PARTS[i]}"
 
-                    echo "CURRENT_PATH = $CURRENT_PATH"
+                    CURRENT_PATH="$CURRENT_PATH/${PATH_PARTS[i]}"
+                    
+                    echo "👉 File to Publish = $CURRENT_PATH"
 
                     # Verifica se existe a pasta principal, cria caso não exista
                     if [ $i -lt $((NUM_PARTS - 1)) ]; then
-                      echo ">>> Verificando página pai = $CURRENT_PATH"
+                      echo "👉 Pasta sendo considerada = $CURRENT_PATH"
 
-                      SAFE_PATH="${CURRENT_PATH// /%20}"
+                      # trata espaços, caracteres especiais, encoding em geral.
+                      SAFE_PATH=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$CURRENT_PATH'''))")
+                      # SAFE_PATH="${CURRENT_PATH// /%20}"
 
                       PUT_URL="$WIKI_URL/pages?path=$SAFE_PATH&api-version=$WIKI_API_VERSION"
-                      echo ">>> PUT_URL = $PUT_URL"
+                      echo "🔗 PUT_URL = $PUT_URL"
 
                       status_pai=$(curl -s -o /dev/null -w "%{http_code}" \
                         -u :$(AZURE_DEVOPS_PAT) \
                         -H "Content-Type: application/json" \
                         "$PUT_URL")
 
-                      echo "status_pai = $status_pai"
+                      echo "👉 Status da pasta principal = $status_pai"
 
                       # if [ "$status_pai" -ne 201 ]; then
                       #   echo "Status code expected 201 but got $status_pai"
@@ -216,16 +297,18 @@ stages:
                       #   exit 1
                       # fi
 
-                      # Existe a pasta pai
                       if [ "$status_pai" -eq 200 ]; then
-                        echo ">>> Página pai já existe, pulando = $CURRENT_PATH"
-                      else
-                      # Não existe a pasta pai
-                        SAFE_PATH="${CURRENT_PATH// /%20}"
-                        PUT_URL="$WIKI_URL/pages?path=$SAFE_PATH&api-version=$WIKI_API_VERSION"
+                        # Existe a pasta pai
+                        echo "👉 Página pai já existe, pulando..."
 
-                        echo ">>> Criando página pai = $CURRENT_PATH"
-                        echo ">>> Será criado a pasta no ur = $PUT_URL"
+                      else
+                        # Não existe a pasta pai
+                        echo "👉 Será criado uma nova pasta = $CURRENT_PATH"
+                        
+                        # trata espaços, caracteres especiais, encoding em geral.
+                        # SAFE_PATH=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$CURRENT_PATH'''))")
+                        # SAFE_PATH="${CURRENT_PATH// /%20}"
+                        PUT_URL="$WIKI_URL/pages?path=$SAFE_PATH&api-version=$WIKI_API_VERSION"
                         
                         status_new_pai=$(curl -s -o /tmp/curl_response.json -w "%{http_code}" --max-time 60 -X PUT \
                           -u :$(AZURE_DEVOPS_PAT) \
@@ -233,7 +316,7 @@ stages:
                           -d "{\"content\": \"\"}" \
                           "$PUT_URL")
 
-                        echo "status_new_pai = $status_new_pai"
+                        echo "👉 Status da nova pasta criada = $status_new_pai"
 
                         # if [ "$status_new_pai" -ne 201 ]; then
                         #   echo "Status code expected 201 but got $status_code"
@@ -244,35 +327,60 @@ stages:
                     fi
                   done
 
-                  CONTENT="$(cat $file | sed 's/"/\\"/g' | sed ":a;N;\$!ba;s/\n/\\n/g")"
-                  SAFE_PATH="${WIKI_PATH// /%20}"
+                  # trata aspas, quebra de linha, encoding
+                  # CONTENT="$(cat $file | sed 's/"/\\"/g' | sed ":a;N;\$!ba;s/\n/\\n/g")"
+                  CONTENT=$(jq -Rs . < "$file")
+                  # trata espaços, caracteres especiais, encoding em geral.
+                  SAFE_PATH=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$WIKI_PATH'''))")
+                  # SAFE_PATH="${WIKI_PATH// /%20}"
                   PUT_URL="$WIKI_URL/pages?path=$SAFE_PATH&api-version=$WIKI_API_VERSION"
 
-                  echo ">>> Criando/Atualizando página final = $WIKI_PATH"
+                  echo "👉 Criando/Atualizando página filho = $WIKI_PATH"
                   echo "PUT_URL = $PUT_URL"
 
+                  # Faz uma requisição GET para a pasta que se pretende publicar, caso exista a pasta, o etag será preenchido
+                  # -D: imprime headers da resposta no stdout
+                  etag=$(curl -s -D - \
+                    -u :$(AZURE_DEVOPS_PAT) \
+                    "$PUT_URL" | grep -i ETag | awk '{print $2}' | tr -d '\r') # Filtra apenas a linha que contém o ETag,  segunda linha (awk '{print $2}')
+                  
                   # -s: não mostra barra de progresso)
                   # -o /tmp/curl_response.json - response em um arquivo temporario
                   # -w "%{http_code}" - pega apenas o status code
-                  status_final_file=$(curl -s -o /tmp/curl_response.json -w "%{http_code}" --max-time 60 -X PUT \
-                    -u :$(AZURE_DEVOPS_PAT) \
-                    -H "Content-Type: application/json" \
-                    -d "{\"content\": \"$CONTENT\"}" \
-                    "$PUT_URL")
+                  if [ -z "$etag" ]; then #se $etag vazia - a pasta não existe
+                    echo "👉 Página não existe, criando..."
+
+                    status_final_file=$(curl -s -o /tmp/curl_response.json -w "%{http_code}" --max-time 60 -X PUT \
+                      -u :$(AZURE_DEVOPS_PAT) \
+                      -H "Content-Type: application/json" \
+                      -d "{\"content\": $CONTENT}" \
+                      "$PUT_URL")
+
+                  else
+                    echo "♻️ Página existe, atualizando..."
+
+                    status_final_file=$(curl -s -o /tmp/curl_response.json -w "%{http_code}" --max-time 60 -X PUT \
+                      -u :$(AZURE_DEVOPS_PAT) \
+                      -H "Content-Type: application/json" \
+                      -H "If-Match: $etag" \
+                      -d "{\"content\": $CONTENT}" \
+                      "$PUT_URL")
+                  fi
 
                   body=$(cat /tmp/curl_response.json)
 
-                  echo "Status code  $status_final_file"
-                  echo "Response body = $body"
-                  echo "status_final_file = $status_final_file"
+                  echo "Status code final = $status_final_file"
+                  echo "Response body final =  $body"
+                  
+                  if [ "$status_final_file" -ne 200 ] && [ "$status_final_file" -ne 201 ]; then
+                    echo "❌  Erro ao publicar página"
+                    echo "Response = $(cat /tmp/curl_response.json)"
+                    exit 1
+                  fi
 
-                  # if [ "$status_final_file" -ne 201 ]; then
-                  #   echo "Status code expected 201 but got $status_final_file"
-                  #   echo "Response body = $(cat /tmp/curl_response.json)"
-                  #   exit 1
-                  # fi
+                  echo "✅ Página publicada:"
+                  echo "🔗 $(echo "$body" | jq -r '.remoteUrl')"
 
-                  echo ">>> Página publicada = $WIKI_PATH"
                 done
 
       - job: successNotifyTestResults
@@ -353,7 +461,7 @@ stages:
 
                 echo "=== Variáveis extraídas ==="
                 
-                echo "baseUrl = $baseUrl" # aqui imprimiu o valor
+                echo "baseUrl = $baseUrl"
                 echo "base_url_api = $base_url_api"
                 echo "endedTestsAt = $endedTestsAt"
                 echo "totalDuration = $totalDuration"

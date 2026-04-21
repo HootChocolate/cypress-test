@@ -491,7 +491,7 @@ module.exports = defineConfig({
                 }
               }
             } else {
-              console.log('[TELEGRAM] skip notification');
+              console.log(`[TELEGRAM] skip notification\nNOTIFY:${objEnv.NOTIFY}\nNOTIFY_ERR_TELEGRAM_SCHEENSHOT:${objEnv.NOTIFY_ERR_TELEGRAM_SCHEENSHOT}\nNOTIFY_ERR_TELEGRAM_VIDEO:${objEnv.NOTIFY_ERR_TELEGRAM_VIDEO}\n`);
             }
           }
         }
