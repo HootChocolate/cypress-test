@@ -204,6 +204,6 @@ A pipeline pode ser configurada para iniciar automaticamente em diferentes cená
 
 ## Fluxo da Pipeline
 
-![Fluxo da Pipeline](cypress/fixtures/geral/imagens/flow.jpg)
+![Fluxo da Pipeline](cypress/fixtures/geral/imagens/cy-flow-ci.png)
 
 
