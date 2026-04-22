@@ -20,7 +20,7 @@ parameters:
     default: false
 
 # A trigger será disparada para a branch master do reposítório de teste.
-# O ambiente que será executado (portal ou qa) dependerá do artefato publicado pela pipeline anterior
+# O ambiente que será executado (master ou qa) dependerá do artefato publicado pela pipeline anterior
 # É necessário a tag para execuções via cron
 # resources:
 #   pipelines:
@@ -279,7 +279,6 @@ stages:
 
                       # trata espaços, caracteres especiais, encoding em geral.
                       SAFE_PATH=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$CURRENT_PATH'''))")
-                      # SAFE_PATH="${CURRENT_PATH// /%20}"
 
                       PUT_URL="$WIKI_URL/pages?path=$SAFE_PATH&api-version=$WIKI_API_VERSION"
                       echo "🔗 PUT_URL = $PUT_URL"
@@ -291,12 +290,6 @@ stages:
 
                       echo "👉 Status da pasta principal = $status_pai"
 
-                      # if [ "$status_pai" -ne 201 ]; then
-                      #   echo "Status code expected 201 but got $status_pai"
-                      #   echo "Response body = $(cat /tmp/curl_response.json)"
-                      #   exit 1
-                      # fi
-
                       if [ "$status_pai" -eq 200 ]; then
                         # Existe a pasta pai
                         echo "👉 Página pai já existe, pulando..."
@@ -305,9 +298,6 @@ stages:
                         # Não existe a pasta pai
                         echo "👉 Será criado uma nova pasta = $CURRENT_PATH"
                         
-                        # trata espaços, caracteres especiais, encoding em geral.
-                        # SAFE_PATH=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$CURRENT_PATH'''))")
-                        # SAFE_PATH="${CURRENT_PATH// /%20}"
                         PUT_URL="$WIKI_URL/pages?path=$SAFE_PATH&api-version=$WIKI_API_VERSION"
                         
                         status_new_pai=$(curl -s -o /tmp/curl_response.json -w "%{http_code}" --max-time 60 -X PUT \
@@ -317,22 +307,14 @@ stages:
                           "$PUT_URL")
 
                         echo "👉 Status da nova pasta criada = $status_new_pai"
-
-                        # if [ "$status_new_pai" -ne 201 ]; then
-                        #   echo "Status code expected 201 but got $status_code"
-                        #   echo "Response body = $(cat /tmp/curl_response.json)"
-                        #   exit 1
-                        # fi
                       fi
                     fi
                   done
 
                   # trata aspas, quebra de linha, encoding
-                  # CONTENT="$(cat $file | sed 's/"/\\"/g' | sed ":a;N;\$!ba;s/\n/\\n/g")"
                   CONTENT=$(jq -Rs . < "$file")
                   # trata espaços, caracteres especiais, encoding em geral.
                   SAFE_PATH=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$WIKI_PATH'''))")
-                  # SAFE_PATH="${WIKI_PATH// /%20}"
                   PUT_URL="$WIKI_URL/pages?path=$SAFE_PATH&api-version=$WIKI_API_VERSION"
 
                   echo "👉 Criando/Atualizando página filho = $WIKI_PATH"
