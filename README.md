@@ -8,10 +8,22 @@
 - Publicação de documentação de API.
 
 
->> Este repositório é uma versão adaptada para portfólio, sem dados sensíveis.
+## 🔄 Execução da Pipeline
+
+A pipeline pode ser configurada para iniciar automaticamente em diferentes cenários:
+
+- 🔗 **Execução encadeada (trigger por outra pipeline):**  
+  A pipeline pode ser disparada após a finalização de outra pipeline.
+
+- ⏰ **Execução agendada (CRON):**  
+  Também é possível configurar um agendamento para execução automática em horários definidos.
+
+## Fluxo da Pipeline
+
+![Fluxo da Pipeline](cypress/fixtures/geral/imagens/cy-flow-ci.png)
 
 ### 🗂️ Pasta temp:
-Para evitar múltiplos logins:   
+Para evitar múltiplos login, realizando apenas um por usuário, para carregar permissões:   
 
 - Verifica se existe token em fixtures/tmp/
 - Caso não exista → cria arquivo:   
@@ -191,19 +203,4 @@ Cypress.Commands.add("do_something", () => {
 	})
 })   
 ```
-
-## 🔄 Execução da Pipeline
-
-A pipeline pode ser configurada para iniciar automaticamente em diferentes cenários:
-
-- 🔗 **Execução encadeada (trigger por outra pipeline):**  
-  A pipeline pode ser disparada após a finalização de outra pipeline.
-
-- ⏰ **Execução agendada (CRON):**  
-  Também é possível configurar um agendamento para execução automática em horários definidos.
-
-## Fluxo da Pipeline
-
-![Fluxo da Pipeline](cypress/fixtures/geral/imagens/cy-flow-ci.png)
-
 
