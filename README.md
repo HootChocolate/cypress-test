@@ -7,6 +7,9 @@
 - Execução automática por branch (QA/ Master);   
 - Publicação de documentação de API.
 
+## Fluxograma
+
+![Fluxo da Pipeline](cypress/fixtures/geral/imagens/cy-flow-ci.png)
 
 ## 🔄 Execução da Pipeline
 
@@ -17,10 +20,6 @@ A pipeline pode ser configurada para iniciar automaticamente em diferentes cená
 
 - ⏰ **Execução agendada (CRON):**  
   Também é possível configurar um agendamento para execução automática em horários definidos.
-
-## Fluxo da Pipeline
-
-![Fluxo da Pipeline](cypress/fixtures/geral/imagens/cy-flow-ci.png)
 
 ### 🗂️ Pasta temp:
 Para evitar múltiplos login, realizando apenas um por usuário, para carregar permissões:   
